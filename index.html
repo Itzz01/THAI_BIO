@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thai‑Bio Skin Quiz — เล่นเกมวิเคราะห์ผิว</title>
+  <style>
+    :root{--bg:#f7f8fb;--card:#ffffff;--ink:#111827;--muted:#6b7280;--accent:#23a36d;--accent-2:#0ea5e9}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:920px;margin:0 auto;padding:24px}
+    .card{background:var(--card);border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.06);overflow:hidden}
+    header.hero{padding:28px 24px;border-bottom:1px solid #eef1f6;display:flex;gap:16px;align-items:center}
+    .logo{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:grid;place-items:center;font-weight:700;color:#065f46}
+    h1{font-size:22px;margin:0}
+    .muted{color:var(--muted)}
+    .content{padding:20px}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px}
+    @media(min-width:720px){.grid{grid-template-columns:1fr 1fr}}
+    .panel{padding:18px;border:1px solid #eef2f7;border-radius:14px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:12px;border:1px solid transparent;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+    .btn.alt{background:#fff;color:var(--ink);border-color:#e5e7eb}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .q{margin:4px 0 10px;font-weight:600}
+    .choice{display:block;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;margin:8px 0;background:#fff;cursor:pointer}
+    .choice input{margin-right:8px}
+    .footer{border-top:1px solid #eef1f6;padding:16px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+    .consent{font-size:13px;line-height:1.35;color:var(--muted)}
+    .consent a{color:var(--accent-2);text-decoration:none}
+    .badge{display:inline-block;background:#ecfeff;color:#0369a1;font-weight:700;border-radius:999px;padding:6px 10px;font-size:12px}
+    .scorebar{height:10px;background:#eef2f7;border-radius:999px;overflow:hidden}
+    .scorebar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#10b981);width:0%}
+    .hidden{display:none}
+    .note{font-size:13px;color:#64748b}
+    .pill{display:inline-block;padding:6px 10px;background:#f1f5f9;border-radius:999px;margin:4px 6px 0 0;font-size:12px}
+    .center{display:grid;place-items:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" id="app">
+      <header class="hero">
+        <div class="logo">TB</div>
+        <div>
+          <h1>เล่นเกมวิเคราะห์ผิว — Thai‑Bio Skin Quiz</h1>
+          <div class="muted">ตอบคำถามให้ครบ รับคะแนน + ของรางวัล และรับคำแนะนำการดูแลผิวแบบเฉพาะคุณ</div>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- Intro / Consent -->
+        <section id="intro">
+          <div class="grid">
+            <div class="panel">
+              <p class="q">เริ่มเกมกันเลยไหม?</p>
+              <p class="note">แบบทดสอบนี้ใช้เวลาประมาณ 2–3 นาที ผลลัพธ์จะช่วยบอก <strong>โปรไฟล์ผิว</strong> และกิจวัตรดูแลผิวที่เหมาะกับคุณ</p>
+
+              <div class="panel" style="background:#f8fffb;border-color:#d1fae5">
+                <div class="q">การยินยอม (จำเป็น)</div>
+                <label class="choice"><input type="checkbox" id="agree" /> ฉันยินยอมให้ Thai‑Bio เก็บและใช้ข้อมูลคำตอบของฉันเพื่อวิเคราะห์และส่งคำแนะนำ/โปรโมชันตามความสนใจ ตาม <a href="#" onclick="alert('ใส่ลิงก์นโยบายความเป็นส่วนตัวของคุณที่นี่'); return false;">นโยบายความเป็นส่วนตัว</a></label>
+                <div class="note">คุณสามารถถอนความยินยอมได้ทุกเมื่อ และเราจะไม่เก็บข้อมูลที่ไม่จำเป็น</div>
+              </div>
+
+              <div style="margin-top:12px;display:flex;gap:8px">
+                <button class="btn" id="startBtn" disabled>เริ่มเล่น</button>
+                <button class="btn alt" id="previewBtn">ดูตัวอย่างคำถาม</button>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="q">ของรางวัลประจำสัปดาห์</div>
+              <ul class="note">
+                <li>Top 10 คะแนนสูงสุด รับโค้ดส่วนลดพิเศษ</li>
+                <li>สุ่มผู้โชคดี 5 คน รับมินิไซส์ทดลอง</li>
+              </ul>
+              <div class="scorebar" aria-hidden="true"><span id="progress"></span></div>
+              <div style="margin-top:8px" class="muted">ความคืบหน้า: <span id="pLabel">0%</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Quiz -->
+        <section id="quiz" class="hidden"></section>
+
+        <!-- Result -->
+        <section id="result" class="hidden"></section>
+      </div>
+
+      <div class="footer">
+        <div class="consent">© Thai‑Bio — เกมนี้ออกแบบแบบ <strong>โปร่งใส เคารพความเป็นส่วนตัว</strong> เก็บเท่าที่จำเป็นเท่านั้น</div>
+        <div class="badge" id="badge">โหมด: สาธารณะ</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==== CONFIG ====
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbxkA4hvkHBDxTTRGmLqqX8SiLW3A-o18u6Tezr5ipE8VRpTauZUM-81eIqy6ADZWD2_0A/exec"; // ใส่ Web App URL ของ Google Apps Script (รับแบบ POST)
+    const GAME_ID = "THAI-BIO";
+
+    // ==== QUESTIONS (ตัวอย่างปรับใช้กับผิวแพ้ง่าย/สะเก็ดเงิน) ====
+    const QUESTIONS = [
+      { id:"age", q:"อายุของคุณอยู่ช่วงไหน?", type:"single", choices:[
+        {v:"<20", t:"ต่ำกว่า 20"},{v:"20-29", t:"20–29"},{v:"30-39", t:"30–39"},{v:"40-49", t:"40–49"},{v:"50+", t:"50+"}
+      ]},
+      { id:"skin", q:"สภาพผิวโดยรวมเป็นแบบไหน?", type:"single", choices:[
+        {v:"dry", t:"แห้ง/ตึง"}, {v:"normal", t:"ปกติ"}, {v:"combo", t:"ผสม"}, {v:"oily", t:"มันง่าย"}
+      ]},
+      { id:"sens", q:"ระดับผิวแพ้ง่าย/ระคายเคืองช่วง 1 เดือนที่ผ่านมา", type:"single", choices:[
+        {v:"low", t:"น้อย"},{v:"mid", t:"ปานกลาง"},{v:"high", t:"ค่อนข้างมาก"}
+      ]},
+      { id:"sym", q:"อาการที่คุณพบเจอบ่อย (เลือกได้มากกว่า 1)", type:"multi", choices:[
+        {v:"itch", t:"คัน"},{v:"red", t:"แดง"},{v:"flake", t:"ลอก/ขุย"},{v:"tight", t:"ตึง"},{v:"scalp", t:"หนังศีรษะแพ้ง่าย"}
+      ]},
+      { id:"trig", q:"ตัวกระตุ้นที่สังเกตได้", type:"multi", choices:[
+        {v:"hot", t:"อากาศร้อน/แดด"},{v:"stress", t:"เครียด/พักผ่อนไม่พอ"},{v:"food", t:"อาหารบางชนิด"},{v:"chem", t:"สารระคายเคือง/น้ำหอม"}
+      ]},
+      { id:"goal", q:"เป้าหมายหลักของคุณ", type:"single", choices:[
+        {v:"calm", t:"ลดคัน/แดง/ระคายเคือง"},{v:"hydrate", t:"ชุ่มชื้นยาวนาน"},{v:"barrier", t:"ฟื้นเกราะผิว"}
+      ]},
+      { id:"contact", q:"อยากรับโค้ดส่วนลด/คำแนะนำส่วนตัวทางไหน?", type:"single", choices:[
+        {v:"none", t:"ไม่ต้องการ"},{v:"line", t:"LINE"},{v:"email", t:"อีเมล"}
+      ]}
+    ];
+
+    // persona rules อย่างง่าย
+    function computePersona(ans){
+      const score = { calm:0, hydrate:0, barrier:0 };
+      if(ans.goal) score[ans.goal] += 2;
+      if(ans.skin==="dry") score.hydrate++;
+      if(ans.sens==="high") score.calm+=2, score.barrier++;
+      if((ans.sym||[]).includes("flake")) score.hydrate++;
+      if((ans.sym||[]).includes("tight")) score.barrier++;
+      // pick max
+      const entries = Object.entries(score).sort((a,b)=>b[1]-a[1]);
+      const key = entries[0][0];
+      const map = {
+        calm: { name:"Calm & Soothe", tips:["ใช้ครีมอ่อนโยน ปราศจากสเตียรอยด์/น้ำหอม","แต้มบริเวณคัน-แดง วันละ 2–3 ครั้ง","เลี่ยงตัวกระตุ้น เช่น ความเครียด/อากาศร้อน"], rec:["Thai‑Bio Skin Care Cream","Mild Shampoo","Mild Shower Gel"] },
+        hydrate: { name:"Deep Hydration", tips:["ทามอยส์เจอร์ทันทีหลังอาบน้ำ","เสริมชุ่มชื้นระหว่างวันบริเวณตึง","ดื่มน้ำให้พอและนอนให้พอ"], rec:["Intensive Moisturizing Body Lotion","O.C.O Ozonated Coconut Oil"] },
+        barrier: { name:"Barrier First", tips:["เลือกสูตรมีสารช่วยเกราะผิว (เช่น pentavitin, HA)","หลีกเลี่ยงสารระคายเคือง","ทาต่อเนื่องอย่างน้อย 14 วัน"], rec:["Intensive Facial Emulsion","Skin Care Cream"] }
+      };
+      return { key, ...map[key], raw:score };
+    }
+
+    // state
+    const state = { step:0, answers:{}, started:false };
+
+    const $ = (sel)=>document.querySelector(sel);
+
+    const intro = $('#intro');
+    const quiz = $('#quiz');
+    const result = $('#result');
+    const progress = $('#progress');
+    const pLabel = $('#pLabel');
+
+    // consent gate
+    $('#agree').addEventListener('change', (e)=>{
+      $('#startBtn').disabled = !e.target.checked;
+    });
+
+    $('#previewBtn').addEventListener('click', ()=>{
+      alert('ตัวอย่างคำถาม: "สภาพผิวเป็นแบบไหน?", "ตัวกระตุ้นที่เจอบ่อย?" ฯลฯ');
+    });
+
+    $('#startBtn').addEventListener('click', ()=>{
+      state.started = true; state.step = 0; state.answers = {};
+      intro.classList.add('hidden');
+      quiz.classList.remove('hidden');
+      renderStep();
+    });
+
+    function renderStep(){
+      const i = state.step;
+      const total = QUESTIONS.length;
+      const q = QUESTIONS[i];
+      progress.style.width = Math.round((i/total)*100)+"%";
+      pLabel.textContent = Math.round((i/total)*100)+"%";
+
+      quiz.innerHTML = `
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <div class="badge">ข้อ ${i+1} / ${total}</div>
+            <button class="btn alt" onclick="quitGame()">ออกจากเกม</button>
+          </div>
+          <h2 class="q" style="margin-top:12px">${q.q}</h2>
+          <div>${renderChoices(q)}</div>
+          <div style="margin-top:14px;display:flex;gap:8px">
+            <button class="btn alt" onclick="prevStep()" ${i===0?'disabled':''}>ย้อนกลับ</button>
+            <button class="btn" onclick="nextStep()">ถัดไป</button>
+          </div>
+        </div>`;
+    }
+
+    function renderChoices(q){
+      if(q.type === 'single'){
+        return q.choices.map(c=>`<label class="choice"><input type="radio" name="${q.id}" value="${c.v}"> ${c.t}</label>`).join('');
+      } else { // multi
+        return q.choices.map(c=>`<label class="choice"><input type="checkbox" name="${q.id}" value="${c.v}"> ${c.t}</label>`).join('');
+      }
+    }
+
+    window.prevStep = function(){
+      if(state.step>0){ state.step--; renderStep(); }
+    }
+
+    window.nextStep = function(){
+      const q = QUESTIONS[state.step];
+      const inputs = [...document.querySelectorAll(`[name="${q.id}"]`)];
+      if(q.type==='single'){
+        const pick = inputs.find(i=>i.checked);
+        if(!pick){ alert('โปรดเลือกตัวเลือก'); return; }
+        state.answers[q.id] = pick.value;
+      }else{
+        const picks = inputs.filter(i=>i.checked).map(i=>i.value);
+        if(picks.length===0){ alert('โปรดเลือกอย่างน้อย 1 ตัวเลือก'); return; }
+        state.answers[q.id] = picks;
+      }
+      if(state.step < QUESTIONS.length-1){
+        state.step++; renderStep();
+      } else {
+        finish();
+      }
+    }
+
+    function quitGame(){
+      if(confirm('ต้องการออกจากเกมหรือไม่?')){ location.reload(); }
+    }
+
+    async function finish(){
+      quiz.classList.add('hidden');
+      progress.style.width = '100%'; pLabel.textContent = '100%';
+
+      // persona & summary
+      const persona = computePersona(state.answers);
+      const ts = new Date().toISOString();
+      const payload = { game:GAME_ID, ts, answers:state.answers, persona:persona.key, consent:true, ua:navigator.userAgent };
+
+      // render
+      result.classList.remove('hidden');
+      result.innerHTML = `
+        <div class="panel">
+          <h2 style="margin:0 0 6px">โปรไฟล์ผิวของคุณ: <span class="pill">${persona.name}</span></h2>
+          <div class="note">สรุปคำแนะนำเฉพาะคุณ พร้อมโค้ดสะสมคะแนน</div>
+
+          <div style="margin-top:14px">
+            <div class="q">ทริคดูแลผิว</div>
+            <ul class="note">${persona.tips.map(t=>`<li>${t}</li>`).join('')}</ul>
+          </div>
+
+          <div style="margin-top:10px">
+            <div class="q">แนะนำสำหรับคุณ</div>
+            <div>${persona.rec.map(r=>`<span class="pill">${r}</span>`).join('')}</div>
+          </div>
+
+          <div style="margin-top:16px" class="panel">
+            <div class="q">รับโค้ดสะสมคะแนน/ส่วนลด</div>
+            <form id="contactForm">
+              <label class="choice"><input type="radio" name="channel" value="none" checked> ไม่รับตอนนี้</label>
+              <label class="choice"><input type="radio" name="channel" value="line"> LINE ID: <input type="text" name="line_id" placeholder="@thai-bio หรือ ID ของคุณ" style="margin-left:8px"></label>
+              <label class="choice"><input type="radio" name="channel" value="email"> อีเมล: <input type="email" name="email" placeholder="you@example.com" style="margin-left:8px"></label>
+              <label class="choice"><input type="checkbox" name="marketing" checked> ยินยอมรับข่าวสาร/ข้อเสนอการตลาดจาก Thai‑Bio</label>
+              <div class="note">คุณสามารถยกเลิกได้ทุกเมื่อผ่านลิงก์ยกเลิกการรับข่าวสาร</div>
+              <div style="margin-top:10px;display:flex;gap:8px">
+                <button class="btn" type="submit">บันทึก & ขอรับโค้ด</button>
+                <button class="btn alt" type="button" onclick="location.reload()">เล่นใหม่</button>
+              </div>
+            </form>
+            <div id="thanks" class="hidden" style="margin-top:10px">
+              <span class="pill">บันทึกแล้ว</span> ขอบคุณ! โค้ดของคุณ: <strong id="coupon">THAIBIO-NEW10</strong>
+            </div>
+          </div>
+        </div>`;
+
+      // submit answers immediately (anonymous unless contact provided)
+      try{
+        await postData(ENDPOINT, payload);
+      }catch(err){ console.warn('ส่งคำตอบไม่สำเร็จ (จะไม่หยุดการเล่น):', err); }
+
+      // contact submit
+      $('#contactForm').addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const data = Object.fromEntries(fd.entries());
+        const channel = data.channel || 'none';
+        const contact = channel==='line'? (data.line_id||'') : channel==='email'? (data.email||'') : '';
+        const marketing = !!data.marketing;
+        if(channel!=='none' && !contact){ alert('โปรดกรอกข้อมูลติดต่อ'); return; }
+        const body = { ...payload, contact_channel:channel, contact, marketing_opt_in:marketing };
+        try{
+          await postData(ENDPOINT, body);
+          $('#thanks').classList.remove('hidden');
+        }catch(err){ alert('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'); }
+      });
+    }
+
+    async function postData(url, data){
+      // ปลอดภัยขึ้น: ส่งแบบ text/plain + JSON เพื่อหลบ CORS ขั้นต้น (ปรับที่ Apps Script)
+      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(data) });
+      if(!res.ok) throw new Error('Network error');
+      return res.text();
+    }
+  </script>
+</body>
+</html>
