@@ -1,0 +1,601 @@
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Award, RefreshCw, Heart, Star, Zap, Trophy, Clock, Flame, Target } from 'lucide-react';
+
+const SkinQuiz = () => {
+  const [gameState, setGameState] = useState('start');
+  const [difficulty, setDifficulty] = useState('normal');
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState([]);
+  const [score, setScore] = useState(0);
+  const [userName, setUserName] = useState('');
+  const [topScores, setTopScores] = useState([]);
+  const [isSending, setIsSending] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [particles, setParticles] = useState([]);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [lives, setLives] = useState(3);
+  const [timeLeft, setTimeLeft] = useState(15);
+  const [streak, setStreak] = useState(0);
+  const [maxStreak, setMaxStreak] = useState(0);
+  const [feedback, setFeedback] = useState(null);
+  const [totalBonus, setTotalBonus] = useState(0);
+  
+  const GOOGLE_SCRIPT_URL = 'ใส่_URL_ที่_ได้_จาก_Apps_Script_ตรงนี้';
+
+  const difficultySettings = {
+    easy: { time: 20, lives: 5, multiplier: 1 },
+    normal: { time: 15, lives: 3, multiplier: 1.5 },
+    hard: { time: 10, lives: 2, multiplier: 2 }
+  };
+
+  const questions = [
+    {
+      question: "ข้อไหนดีที่สุดสำหรับผิวหน้า?",
+      emoji: "🤔",
+      options: [
+        { text: "ล้างหน้าวันละ 5-6 ครั้ง", correct: false },
+        { text: "ล้างหน้าเช้า-เย็น ใช้ครีมกันแดด", correct: true },
+        { text: "ไม่ต้องล้างหน้า เพราะไม่แต่งหน้า", correct: false },
+        { text: "ล้างหน้าด้วยสบู่ก้อนธรรมดา", correct: false }
+      ],
+      points: 20
+    },
+    {
+      question: "ควรดื่มน้ำวันละกี่แก้วถึงจะดีต่อผิว?",
+      emoji: "💧",
+      options: [
+        { text: "2-3 แก้ว", correct: false },
+        { text: "4-5 แก้ว", correct: false },
+        { text: "8-10 แก้ว", correct: true },
+        { text: "มากเท่าไหร่ก็ได้", correct: false }
+      ],
+      points: 15
+    },
+    {
+      question: "SPF ในครีมกันแดดหมายถึงอะไร?",
+      emoji: "☀️",
+      options: [
+        { text: "ระดับความชุ่มชื้น", correct: false },
+        { text: "ระดับป้องกันรังสี UVB", correct: true },
+        { text: "ความหนาของครีม", correct: false },
+        { text: "ความหอมของผลิตภัณฑ์", correct: false }
+      ],
+      points: 25
+    },
+    {
+      question: "เวลานอนที่ดีที่สุดต่อผิวคือ?",
+      emoji: "😴",
+      options: [
+        { text: "นอนดึกแต่นอนเยอะ", correct: false },
+        { text: "นอน 22:00-06:00 น.", correct: true },
+        { text: "นอนกลางวัน 8 ชม.", correct: false },
+        { text: "นอนเมื่อไหร่ก็ได้ให้ครบ 8 ชม.", correct: false }
+      ],
+      points: 20
+    },
+    {
+      question: "อาหารใดดีต่อผิวมากที่สุด?",
+      emoji: "🥗",
+      options: [
+        { text: "ขนมทอด น้ำอгазированный", correct: false },
+        { text: "ผักผลไม้ ปลา ถั่ว", correct: true },
+        { text: "ขนมหวาน นม", correct: false },
+        { text: "เนื้อแดง ของทอด", correct: false }
+      ],
+      points: 20
+    },
+    {
+      question: "ควรทา moisturizer เมื่อไหร่?",
+      emoji: "💆",
+      options: [
+        { text: "เฉพาะตอนกลางคืน", correct: false },
+        { text: "หลังล้างหน้า ตอนผิวยังชื้น", correct: true },
+        { text: "ตอนผิวแห้งสนิท", correct: false },
+        { text: "ก่อนล้างหน้า", correct: false }
+      ],
+      points: 20
+    },
+    {
+      question: "การ exfoliate หน้าควรทำบ่อยแค่ไหน?",
+      emoji: "✨",
+      options: [
+        { text: "ทุกวัน", correct: false },
+        { text: "2-3 ครั้ง/สัปดาห์", correct: true },
+        { text: "เดือนละครั้ง", correct: false },
+        { text: "ไม่ต้องทำเลย", correct: false }
+      ],
+      points: 15
+    },
+    {
+      question: "Vitamin อะไรดีต่อผิวที่สุด?",
+      emoji: "💊",
+      options: [
+        { text: "Vitamin B", correct: false },
+        { text: "Vitamin C และ E", correct: true },
+        { text: "Vitamin D", correct: false },
+        { text: "Vitamin K", correct: false }
+      ],
+      points: 20
+    }
+  ];
+
+  useEffect(() => {
+    const saved = localStorage.getItem('skinQuizTopScores');
+    if (saved) {
+      setTopScores(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (gameState === 'playing' && timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (gameState === 'playing' && timeLeft === 0) {
+      handleTimeout();
+    }
+  }, [timeLeft, gameState]);
+
+  useEffect(() => {
+    if (showConfetti) {
+      const newParticles = Array.from({ length: 50 }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        animationDelay: Math.random() * 3,
+        emoji: ['🎉', '✨', '🌟', '💫', '⭐', '🎊', '💖', '🏆'][Math.floor(Math.random() * 8)]
+      }));
+      setParticles(newParticles);
+      
+      const timer = setTimeout(() => setShowConfetti(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [showConfetti]);
+
+  const handleTimeout = () => {
+    setFeedback({ type: 'timeout', message: '⏰ หมดเวลา!' });
+    const newLives = lives - 1;
+    setLives(newLives);
+    setStreak(0);
+    
+    setTimeout(() => {
+      setFeedback(null);
+      if (newLives <= 0) {
+        endGame();
+      } else {
+        nextQuestion();
+      }
+    }, 1500);
+  };
+
+  const handleAnswer = (isCorrect, points, index) => {
+    setSelectedAnswer(index);
+    
+    const settings = difficultySettings[difficulty];
+    const timeBonus = Math.floor((timeLeft / settings.time) * 10) * settings.multiplier;
+    const streakBonus = streak * 5;
+    
+    if (isCorrect) {
+      const earnedPoints = Math.floor((points + timeBonus + streakBonus) * settings.multiplier);
+      setScore(score + earnedPoints);
+      setTotalBonus(totalBonus + timeBonus + streakBonus);
+      setStreak(streak + 1);
+      if (streak + 1 > maxStreak) setMaxStreak(streak + 1);
+      
+      setFeedback({
+        type: 'correct',
+        message: '✅ ถูกต้อง!',
+        points: earnedPoints,
+        bonus: timeBonus + streakBonus
+      });
+    } else {
+      const newLives = lives - 1;
+      setLives(newLives);
+      setStreak(0);
+      setFeedback({ type: 'wrong', message: '❌ ผิด! เสียหัวใจ' });
+      
+      if (newLives <= 0) {
+        setTimeout(() => {
+          setFeedback(null);
+          endGame();
+        }, 1500);
+        return;
+      }
+    }
+    
+    setTimeout(() => {
+      setFeedback(null);
+      setSelectedAnswer(null);
+      nextQuestion();
+    }, 1500);
+  };
+
+  const nextQuestion = () => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+      setTimeLeft(difficultySettings[difficulty].time);
+    } else {
+      endGame();
+    }
+  };
+
+  const endGame = () => {
+    saveScore(score);
+    const skinType = getSkinType();
+    sendToGoogleSheets(score, skinType);
+    setShowConfetti(score > 50);
+    setGameState('result');
+  };
+
+  const saveScore = (finalScore) => {
+    if (userName) {
+      const newScore = {
+        name: userName,
+        score: finalScore,
+        difficulty,
+        date: new Date().toLocaleDateString('th-TH')
+      };
+      
+      const updated = [...topScores, newScore]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10);
+      
+      setTopScores(updated);
+      localStorage.setItem('skinQuizTopScores', JSON.stringify(updated));
+    }
+  };
+
+  const sendToGoogleSheets = async (finalScore, skinType) => {
+    if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('ใส่_URL')) {
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const data = {
+        name: userName,
+        score: finalScore,
+        difficulty,
+        maxStreak,
+        skinType: skinType.type,
+        answers: answers.join(', ')
+      };
+
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const resetQuiz = () => {
+    setGameState('start');
+    setCurrentQuestion(0);
+    setAnswers([]);
+    setScore(0);
+    setUserName('');
+    setShowConfetti(false);
+    setLives(difficultySettings[difficulty].lives);
+    setTimeLeft(difficultySettings[difficulty].time);
+    setStreak(0);
+    setMaxStreak(0);
+    setTotalBonus(0);
+  };
+
+  const startGame = () => {
+    setLives(difficultySettings[difficulty].lives);
+    setTimeLeft(difficultySettings[difficulty].time);
+    setGameState('playing');
+  };
+
+  const getSkinType = () => {
+    if (score >= 200) return {
+      type: "ผู้เชี่ยวชาญผิวสุขภาพดี",
+      description: "สุดยอด! คุณรู้จักการดูแลผิวอย่างแท้จริง ผิวของคุณต้องสุขภาพดีแน่นอน",
+      color: "from-emerald-400 via-green-400 to-teal-400",
+      emoji: "👑"
+    };
+    if (score >= 120) return {
+      type: "นักดูแลผิวมือโปร",
+      description: "เก่งมาก! คุณมีความรู้เรื่องผิวดีเยี่ยม ผิวของคุณต้องได้รับการดูแลอย่างดี",
+      color: "from-blue-400 via-cyan-400 to-sky-400",
+      emoji: "🌟"
+    };
+    if (score >= 60) return {
+      type: "ผู้ดูแลผิวระดับกลาง",
+      description: "ดีแล้ว! คุณมีพื้นฐานดี แต่ยังมีที่ปรับปรุงอีกนิดนึง",
+      color: "from-yellow-400 via-amber-400 to-orange-400",
+      emoji: "😊"
+    };
+    return {
+      type: "มือใหม่หัดดูแลผิว",
+      description: "ยังต้องเรียนรู้อีกเยอะ! ลองศึกษาเรื่องการดูแลผิวเพิ่มเติมนะ",
+      color: "from-red-400 via-pink-400 to-rose-400",
+      emoji: "💪"
+    };
+  };
+
+  if (gameState === 'start') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-yellow-300/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+        </div>
+
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full relative z-10">
+          <div className="text-center">
+            <div className="relative inline-block mb-4">
+              <Target className="w-20 h-20 text-purple-600 animate-pulse" />
+              <Zap className="w-8 h-8 text-yellow-400 absolute -top-2 -right-2 animate-bounce" />
+            </div>
+            
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+              ⚡ Skin Quiz Challenge
+            </h1>
+            <p className="text-gray-600 mb-6 text-lg font-semibold">
+              🎯 ทดสอบความรู้ ชิงคะแนนสูงสุด!
+            </p>
+            
+            <input
+              type="text"
+              placeholder="⚡ ใส่ชื่อนักรบ..."
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              className="w-full px-6 py-4 border-3 border-purple-300 rounded-2xl text-lg focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all shadow-lg mb-4"
+            />
+
+            <div className="mb-6">
+              <p className="text-sm font-bold text-gray-700 mb-3">⚔️ เลือกระดับความยาก:</p>
+              <div className="space-y-2">
+                {Object.entries(difficultySettings).map(([key, settings]) => (
+                  <button
+                    key={key}
+                    onClick={() => setDifficulty(key)}
+                    className={`w-full px-4 py-3 rounded-xl font-bold transition-all ${
+                      difficulty === key
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg scale-105'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {key === 'easy' && '😊 ง่าย'} 
+                    {key === 'normal' && '😎 ปกติ'} 
+                    {key === 'hard' && '😈 ยาก'}
+                    <span className="text-sm ml-2">
+                      (⏱️ {settings.time}วิ | ❤️ {settings.lives} | ✨ x{settings.multiplier})
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <button
+              onClick={startGame}
+              disabled={!userName}
+              className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white font-bold py-5 px-8 rounded-2xl hover:shadow-2xl transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xl"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Flame className="w-6 h-6 animate-pulse" />
+                เริ่มท้าทาย! 🔥
+              </span>
+            </button>
+
+            {topScores.length > 0 && (
+              <div className="mt-6 text-left bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-4 border-2 border-yellow-300">
+                <div className="flex items-center gap-2 mb-3">
+                  <Trophy className="w-6 h-6 text-yellow-600 animate-bounce" />
+                  <h3 className="font-bold text-gray-800">🏆 Hall of Fame</h3>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {topScores.map((entry, index) => (
+                    <div key={index} className={`flex justify-between items-center rounded-xl px-3 py-2 ${
+                      index === 0 ? 'bg-gradient-to-r from-yellow-300 to-yellow-400' :
+                      index === 1 ? 'bg-gradient-to-r from-gray-300 to-gray-400' :
+                      index === 2 ? 'bg-gradient-to-r from-orange-300 to-orange-400' :
+                      'bg-white'
+                    }`}>
+                      <span className="text-sm font-semibold">
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`} {entry.name}
+                        <span className="text-xs ml-1">({entry.difficulty})</span>
+                      </span>
+                      <span className="font-bold text-purple-700">{entry.score}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (gameState === 'playing') {
+    const currentQ = questions[currentQuestion];
+    const timePercentage = (timeLeft / difficultySettings[difficulty].time) * 100;
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full relative z-10">
+          {/* Stats Bar */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-2">
+              <Heart className="w-5 h-5 text-red-500" />
+              {Array.from({ length: difficultySettings[difficulty].lives }).map((_, i) => (
+                <span key={i} className={`text-2xl ${i < lives ? 'animate-pulse' : 'opacity-30'}`}>
+                  {i < lives ? '❤️' : '🖤'}
+                </span>
+              ))}
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {streak > 0 && (
+                <div className="flex items-center gap-1 bg-orange-100 px-3 py-1 rounded-full animate-pulse">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span className="font-bold text-orange-600">{streak} 🔥</span>
+                </div>
+              )}
+              <div className="bg-purple-100 px-4 py-1 rounded-full">
+                <span className="font-bold text-purple-600">💎 {score}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Timer */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-bold text-gray-600 flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                ข้อ {currentQuestion + 1}/{questions.length}
+              </span>
+              <span className={`text-2xl font-bold ${timeLeft <= 5 ? 'text-red-500 animate-bounce' : 'text-gray-700'}`}>
+                ⏱️ {timeLeft}
+              </span>
+            </div>
+            <div className="relative w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+              <div
+                className={`h-4 rounded-full transition-all duration-1000 ${
+                  timeLeft <= 5 ? 'bg-gradient-to-r from-red-500 to-orange-500' : 
+                  'bg-gradient-to-r from-green-500 to-emerald-500'
+                }`}
+                style={{ width: `${timePercentage}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="text-center mb-6">
+            <span className="text-6xl animate-bounce">{currentQ.emoji}</span>
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+            {currentQ.question}
+          </h2>
+
+          {/* Feedback */}
+          {feedback && (
+            <div className={`mb-4 p-4 rounded-2xl text-center font-bold text-xl animate-bounce ${
+              feedback.type === 'correct' ? 'bg-green-100 text-green-700' :
+              feedback.type === 'wrong' ? 'bg-red-100 text-red-700' :
+              'bg-orange-100 text-orange-700'
+            }`}>
+              {feedback.message}
+              {feedback.points && (
+                <div className="text-sm mt-1">
+                  +{feedback.points} คะแนน {feedback.bonus > 0 && `(โบนัส +${Math.floor(feedback.bonus)})`}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {currentQ.options.map((option, index) => (
+              <button
+                key={index}
+                onClick={() => handleAnswer(option.correct, currentQ.points, index)}
+                disabled={selectedAnswer !== null || feedback !== null}
+                className={`w-full text-left px-6 py-4 rounded-2xl border-3 transition-all transform font-semibold text-lg ${
+                  selectedAnswer === index && option.correct
+                    ? 'bg-gradient-to-r from-green-400 to-emerald-400 border-green-500 scale-105 shadow-2xl'
+                    : selectedAnswer === index && !option.correct
+                    ? 'bg-gradient-to-r from-red-400 to-pink-400 border-red-500 scale-105 shadow-2xl'
+                    : 'bg-white border-purple-300 hover:border-purple-500 hover:scale-105 hover:shadow-xl disabled:opacity-50'
+                }`}
+              >
+                {option.text}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (gameState === 'result') {
+    const skinType = getSkinType();
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center p-4 relative overflow-hidden">
+        {showConfetti && (
+          <div className="fixed inset-0 pointer-events-none z-50">
+            {particles.map((particle) => (
+              <div
+                key={particle.id}
+                className="absolute text-4xl animate-fall"
+                style={{
+                  left: `${particle.left}%`,
+                  animationDelay: `${particle.animationDelay}s`,
+                  top: '-50px'
+                }}
+              >
+                {particle.emoji}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full relative z-10">
+          <div className="text-center">
+            <div className="mb-6">
+              <div className="text-8xl mb-4 animate-bounce">{skinType.emoji}</div>
+              <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                ผลการท้าทาย
+              </h2>
+              <p className="text-2xl text-gray-700 font-bold">{userName}</p>
+            </div>
+
+            <div className={`bg-gradient-to-r ${skinType.color} rounded-3xl p-8 mb-6 shadow-2xl`}>
+              <div className="text-6xl font-bold text-white mb-2">
+                {score} คะแนน
+              </div>
+              <div className="text-2xl font-bold text-white mb-3">
+                {skinType.type}
+              </div>
+              <div className="flex justify-center gap-4 text-white font-semibold">
+                <div className="bg-white/20 px-4 py-2 rounded-full">
+                  🔥 Max Streak: {maxStreak}
+                </div>
+                <div className="bg-white/20 px-4 py-2 rounded-full">
+                  ⚡ โบนัส: +{Math.floor(totalBonus)}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 mb-6 border-2 border-purple-200">
+              <p className="text-gray-700 leading-relaxed text-lg">
+                {skinType.description}
+              </p>
+            </div>
+
+            <button
+              onClick={resetQuiz}
+              className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white font-bold py-5 px-8 rounded-2xl hover:shadow-2xl transform hover:scale-105 transition-all text-xl"
+            >
+              <span className="flex items-center justify-center gap-3">
+                <RefreshCw className="w-6 h-6" />
+                ท้าทายอีกครั้ง! ⚡
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <style jsx>{`
+          @keyframes fall {
+            to {
+              transform: translateY(100vh) rotate(360deg);
+              opacity: 0;
+            }
+          }
+          .animate-fall {
+            animation: fall 4s linear forwards;
+          }
+        `}</style>
+      </div>
+    );
+  }
+};
+
+export default SkinQuiz;
